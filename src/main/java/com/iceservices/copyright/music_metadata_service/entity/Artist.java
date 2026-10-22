@@ -6,8 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,7 +33,7 @@ public class Artist {
     private String entityType;
 
     @Column(name = "created_at")
-    private LocalDate featuredDate;
+    private Date created_at;
 
     @Column(name = "biography", columnDefinition = "TEXT")
     private String biography;

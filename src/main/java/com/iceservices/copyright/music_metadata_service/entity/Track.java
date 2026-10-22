@@ -29,8 +29,8 @@ public class Track {
     @Column(nullable = false)
     private String title;
 
-    @Column(name = "duration_seconds")
-    private Integer durationSeconds;
+    @Column(name = "length_seconds")
+    private Integer lengthSeconds;
 
     private String genre;
 

@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/metadata
+    username: metadata_user
+    password: password1
+
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true # Helpful for local debugging
+        ddl-auto: validate
+
+
+  flyway:
+    enabled: true
+    clean-disabled: false # Allows you to run flywayClean locally to wipe the DB

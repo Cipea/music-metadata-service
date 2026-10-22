@@ -1,3 +1,29 @@
 spring:
   application:
    name: music-metadata-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/metadata
+    username: metadata_user
+    password: password1
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        ddl-auto: validate
+
+  flyway:
+    enabled: true
+    url: ${spring.datasource.url}
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
