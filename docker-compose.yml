@@ -15,7 +15,20 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
+  app:
+    build: . # Tells Compose to build using your Dockerfile in the current directory
+    container_name: metadata_api
+    ports:
+      - "8080:8080"
+    environment:
+      # Activates application-local.yml
+      - SPRING_PROFILES_ACTIVE=local
+      # Overrides the localhost URL to use Docker's internal network resolution
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/metadata
+      - SPRING_DATA_REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
   redis:
     image: redis:7-alpine
     container_name: metadata_cache
