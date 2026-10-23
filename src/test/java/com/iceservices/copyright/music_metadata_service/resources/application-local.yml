@@ -17,6 +17,13 @@ spring:
     clean-disabled: false # Allows you to run flywayClean locally to wipe the DB
     locations: classpath:db/migration,classpath:db/seed
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://dev-cliw71aikgnw5d80.us.auth0.com/
+
 logging:
   level:
     org.flywaydb: DEBUG
+    org.springframework.security: DEBUG

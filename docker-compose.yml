@@ -27,6 +27,8 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/metadata
       - SPRING_FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/seed
       - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://dev-cliw71aikgnw5d80.us.auth0.com/
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG
     depends_on:
       postgres:
         condition: service_healthy

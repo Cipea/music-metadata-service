@@ -58,12 +58,12 @@ public class MetadataController {
      * POST /api/v1/artist/{artistId}/aliases
      */
     @PostMapping("/{artistId}/aliases")
-    public ResponseEntity<Artist> addExplicitAlias(
+    public ResponseEntity<ArtistResponseDto> addExplicitAlias(
             @PathVariable UUID artistId,
             @RequestBody AliasRequestDto request) {
 
         Artist updatedArtist = metadataService.addExplicitAlias(artistId, request.aliasName());
-        return ResponseEntity.ok(updatedArtist);
+        return ResponseEntity.ok(ArtistResponseDto.fromEntity(updatedArtist));
     }
 
     /**

@@ -23,6 +23,12 @@ spring:
     user: ${spring.datasource.username}
     password: ${spring.datasource.password}
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://dev-cliw71aikgnw5d80.us.auth0.com/
+
   data:
     redis:
       host: localhost

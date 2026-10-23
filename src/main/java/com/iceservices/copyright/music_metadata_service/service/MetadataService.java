@@ -13,10 +13,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Service
@@ -51,10 +55,6 @@ public class MetadataService {
         return trackRepository.save(track);
     }
 
-    /**
-     * POST /api/v1/artist/{artistId}/tracks
-     * Appends a new track and evicts the track cache for this artist.
-     */
     @Transactional
     @CacheEvict(value = "artist-tracks", key = "#artistId")
     public Artist addExplicitAlias(UUID artistId, String aliasName) {
@@ -62,6 +62,16 @@ public class MetadataService {
 
         Artist artist = artistRepository.findById(artistId)
                 .orElseThrow(() -> new EntityNotFoundException("Artist not found"));
+
+        // do mot add an alias if there is one with the same name
+        boolean artistAliasExist = artist.getAliases()
+                .stream()
+                .anyMatch(artistAlias ->
+                        artistAlias.getAliasName().equals(aliasName));
+
+        if (artistAliasExist) {
+            throw new IllegalArgumentException("Artist Alias already exist");
+        }
 
         ArtistAlias artistAlias = ArtistAlias.builder()
                 .artist(artist)
@@ -123,17 +133,25 @@ public class MetadataService {
 
     /**
      * GET /api/v1/artists/artist-of-the-day
-     * Returns the currently cached featured artist.
+     * Returns a deterministic artist for the current UTC day, rotating through artists by ID.
      */
     @Transactional(readOnly = true)
-    @Cacheable(value = "artist-of-the-day")
     public Artist getArtistOfTheDay() {
         log.info("Fetching Artist of the Day from database");
 
-        // Requires a custom method in ArtistRepository:
-        // Optional<Artist> findFirstByFeaturedDate(LocalDate date);
-//        return artistRepository.findFirstByFeaturedDate(LocalDate.now())
-//                .orElseThrow(() -> new EntityNotFoundException("No featured artist found for today"));
-        return new Artist();
+        long artistCount = artistRepository.count();
+        if (artistCount == 0) {
+            throw new EntityNotFoundException("No artists available for Artist of the Day");
+        }
+
+        long dayIndex = Math.floorMod(LocalDate.now(ZoneOffset.UTC).toEpochDay(), artistCount);
+        Pageable artistPage = PageRequest.of(
+                Math.toIntExact(dayIndex),
+                1,
+                Sort.by(Sort.Direction.ASC, "id"));
+
+        return artistRepository.findAll(artistPage).getContent().stream()
+                .findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("No artists available for Artist of the Day"));
     }
 }
