@@ -1,8 +1,6 @@
 package com.iceservices.copyright.music_metadata_service.controller;
 
-import com.iceservices.copyright.music_metadata_service.dto.AliasRequestDto;
-import com.iceservices.copyright.music_metadata_service.dto.ArtistUpdateDto;
-import com.iceservices.copyright.music_metadata_service.dto.TrackRequestDto;
+import com.iceservices.copyright.music_metadata_service.dto.*;
 import com.iceservices.copyright.music_metadata_service.entity.Artist;
 import com.iceservices.copyright.music_metadata_service.entity.Track;
 import com.iceservices.copyright.music_metadata_service.service.MetadataService;
@@ -18,17 +16,17 @@ import java.net.URI;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/artists")
+@RequestMapping("/api/v1/artist")
 @RequiredArgsConstructor
 public class MetadataController {
 
     private final MetadataService metadataService;
 
     /**
-     * POST /api/v1/artists/{artistId}/tracks
+     * POST /api/v1/artist/{artistId}/tracks
      */
     @PostMapping("/{artistId}/tracks")
-    public ResponseEntity<Track> addTrack(
+    public ResponseEntity<TrackResponseDto> addTrack(
             @PathVariable UUID artistId,
             @RequestBody TrackRequestDto request) {
 
@@ -41,23 +39,23 @@ public class MetadataController {
                 .buildAndExpand(track.getId())
                 .toUri();
 
-        return ResponseEntity.created(location).body(track);
+        return ResponseEntity.created(location).body(TrackResponseDto.fromEntity(track));
     }
 
     /**
-     * PATCH /api/v1/artists/{artistId}/name
+     * PATCH /api/v1/artist/{artistId}/name
      */
     @PatchMapping("/{artistId}/name")
-    public ResponseEntity<Artist> updateArtistName(
+    public ResponseEntity<ArtistResponseDto> updateArtistName(
             @PathVariable UUID artistId,
             @RequestBody ArtistUpdateDto request) {
 
         Artist updatedArtist = metadataService.updateArtistName(artistId, request.newPrimaryName());
-        return ResponseEntity.ok(updatedArtist);
+        return ResponseEntity.ok(ArtistResponseDto.fromEntity(updatedArtist));
     }
 
     /**
-     * POST /api/v1/artists/{artistId}/aliases
+     * POST /api/v1/artist/{artistId}/aliases
      */
     @PostMapping("/{artistId}/aliases")
     public ResponseEntity<Artist> addExplicitAlias(
@@ -69,24 +67,25 @@ public class MetadataController {
     }
 
     /**
-     * GET /api/v1/artists/{artistId}/tracks
+     * GET /api/v1/artist/{artistId}/tracks
      */
     @GetMapping("/{artistId}/tracks")
-    public ResponseEntity<Page<Track>> getArtistTracks(
+    public ResponseEntity<Page<TrackResponseDto>> getArtistTracks(
             @PathVariable UUID artistId,
             @PageableDefault(size = 20) Pageable pageable) {
 
-        Page<Track> tracks = metadataService.getArtistTracks(artistId, pageable);
+        Page<TrackResponseDto> tracks = metadataService.getArtistTracks(artistId, pageable)
+                .map(TrackResponseDto::fromEntity);
         return ResponseEntity.ok(tracks);
     }
 
     /**
-     * GET /api/v1/artists/artist-of-the-day
+     * GET /api/v1/artist/artist-of-the-day
      * Note: We override the class-level mapping to match the specific route.
      */
     @GetMapping("/artist-of-the-day")
-    public ResponseEntity<Artist> getArtistOfTheDay() {
-        Artist artist = metadataService.getArtistOfTheDay();
+    public ResponseEntity<ArtistResponseDto> getArtistOfTheDay() {
+        ArtistResponseDto artist = ArtistResponseDto.fromEntity(metadataService.getArtistOfTheDay());
         return ResponseEntity.ok(artist);
     }
 }

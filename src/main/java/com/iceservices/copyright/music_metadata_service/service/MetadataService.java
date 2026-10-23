@@ -1,8 +1,6 @@
 package com.iceservices.copyright.music_metadata_service.service;
 
-import com.iceservices.copyright.music_metadata_service.dto.AliasRequestDto;
-import com.iceservices.copyright.music_metadata_service.dto.ArtistUpdateDto;
-import com.iceservices.copyright.music_metadata_service.dto.TrackRequestDto;
+import com.iceservices.copyright.music_metadata_service.dto.*;
 import com.iceservices.copyright.music_metadata_service.entity.Artist;
 import com.iceservices.copyright.music_metadata_service.entity.ArtistAlias;
 import com.iceservices.copyright.music_metadata_service.entity.Track;

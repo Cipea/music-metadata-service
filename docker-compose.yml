@@ -25,6 +25,7 @@ services:
       - SPRING_PROFILES_ACTIVE=local
       # Overrides the localhost URL to use Docker's internal network resolution
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/metadata
+      - SPRING_FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/seed
       - SPRING_DATA_REDIS_HOST=redis
     depends_on:
       postgres:

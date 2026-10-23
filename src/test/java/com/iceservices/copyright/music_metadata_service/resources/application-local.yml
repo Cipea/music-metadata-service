@@ -15,3 +15,8 @@ spring:
   flyway:
     enabled: true
     clean-disabled: false # Allows you to run flywayClean locally to wipe the DB
+    locations: classpath:db/migration,classpath:db/seed
+
+logging:
+  level:
+    org.flywaydb: DEBUG

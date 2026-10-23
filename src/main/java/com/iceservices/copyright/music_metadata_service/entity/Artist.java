@@ -33,7 +33,7 @@ public class Artist {
     private String entityType;
 
     @Column(name = "created_at")
-    private Date created_at;
+    private Date createdAt;
 
     @Column(name = "biography", columnDefinition = "TEXT")
     private String biography;
