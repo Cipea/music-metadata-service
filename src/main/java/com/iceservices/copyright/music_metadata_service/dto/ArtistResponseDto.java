@@ -6,6 +6,7 @@ import com.iceservices.copyright.music_metadata_service.entity.ArtistAlias;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.io.Serializable;
 import java.util.stream.Collectors;
 
 public record ArtistResponseDto(
@@ -16,7 +17,7 @@ public record ArtistResponseDto(
         String biography,
         Date createdAt,
         List<String> aliases
-) {
+) implements Serializable {
     public static ArtistResponseDto fromEntity(Artist artist) {
         return new ArtistResponseDto(
                 artist.getId(),

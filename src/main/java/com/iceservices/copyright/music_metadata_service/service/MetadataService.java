@@ -7,9 +7,11 @@ import com.iceservices.copyright.music_metadata_service.entity.Track;
 import com.iceservices.copyright.music_metadata_service.repository.ArtistAliasRepository;
 import com.iceservices.copyright.music_metadata_service.repository.ArtistRepository;
 import com.iceservices.copyright.music_metadata_service.repository.TrackRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.iceservices.copyright.music_metadata_service.exception.ArtistAliasConflictException;
+import com.iceservices.copyright.music_metadata_service.exception.ArtistNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -32,17 +34,13 @@ public class MetadataService {
     private final TrackRepository trackRepository;
     private final ArtistAliasRepository artistAliasRepository;
 
-    /**
-     * POST /api/v1/artist/{artistId}/tracks
-     * Appends a new track and evicts the track cache for this artist.
-     */
     @Transactional
-    @CacheEvict(value = "artist-tracks", key = "#artistId")
+    @CacheEvict(value = "artist-tracks", allEntries = true)
     public Track addTrack(UUID artistId, TrackRequestDto request) {
         log.info("Adding new track '{}' for artist ID: {}", request.title(), artistId);
 
         Artist artist = artistRepository.findById(artistId)
-                .orElseThrow(() -> new EntityNotFoundException("Artist not found"));
+                .orElseThrow(() -> new ArtistNotFoundException("Artist not found: " + artistId));
 
         Track track = Track.builder()
                 .artist(artist)
@@ -56,21 +54,24 @@ public class MetadataService {
     }
 
     @Transactional
-    @CacheEvict(value = "artist-tracks", key = "#artistId")
+    @Caching(evict = {
+            @CacheEvict(value = "artist-tracks", allEntries = true),
+            @CacheEvict(value = "artist-of-the-day", allEntries = true)
+    })
     public Artist addExplicitAlias(UUID artistId, String aliasName) {
         log.info("Adding new alias '{}' for artist ID: {}", aliasName, artistId);
 
         Artist artist = artistRepository.findById(artistId)
-                .orElseThrow(() -> new EntityNotFoundException("Artist not found"));
+                .orElseThrow(() -> new ArtistNotFoundException("Artist not found: " + artistId));
 
-        // do mot add an alias if there is one with the same name
+        // Prevent duplicate aliases for this artist before writing the new row.
         boolean artistAliasExist = artist.getAliases()
                 .stream()
                 .anyMatch(artistAlias ->
                         artistAlias.getAliasName().equals(aliasName));
 
         if (artistAliasExist) {
-            throw new IllegalArgumentException("Artist Alias already exist");
+            throw new ArtistAliasConflictException("Artist alias already exists: " + aliasName);
         }
 
         ArtistAlias artistAlias = ArtistAlias.builder()
@@ -78,80 +79,86 @@ public class MetadataService {
                 .aliasName(aliasName)
                 .build();
 
-        ArtistAlias savedArtistAlias = artistAliasRepository.save(artistAlias);
+        artistAliasRepository.save(artistAlias);
 
         return artistRepository.findById(artistId)
-                .orElseThrow(() -> new EntityNotFoundException("Artist not found"));
+                .orElseThrow(() -> new ArtistNotFoundException("Artist not found: " + artistId));
     }
 
-    /**
-     * PATCH /api/v1/artist/{artistId}/name
-     * Updates the primary name, moves the old name to aliases, and evicts the cache.
-     */
     @Transactional
-    @CacheEvict(value = "artist-tracks", key = "#artistId")
+    @Caching(evict = {
+            @CacheEvict(value = "artist-tracks", allEntries = true),
+            @CacheEvict(value = "artist-of-the-day", allEntries = true)
+    })
     public Artist updateArtistName(UUID artistId, String newName) {
         log.info("Updating name to '{}' for artist ID: {}", newName, artistId);
 
         Artist artist = artistRepository.findById(artistId)
-                .orElseThrow(() -> new EntityNotFoundException("Artist not found"));
+                .orElseThrow(() -> new ArtistNotFoundException("Artist not found: " + artistId));
 
         if (artist.getPrimaryName().equalsIgnoreCase(newName)) {
             return artist; // No change needed
         }
 
-        // Create an alias from the current name before updating
+        // Keep the old name searchable after changing the artist's primary name.
         ArtistAlias alias = ArtistAlias.builder()
                 .artist(artist)
                 .aliasName(artist.getPrimaryName())
                 .build();
 
-        // Leveraging the CascadeType.ALL on the aliases list
+        // CascadeType.ALL on aliases persists this new alias with the artist.
         artist.getAliases().add(alias);
         artist.setPrimaryName(newName);
 
         return artistRepository.save(artist);
     }
 
-    /**
-     * GET /api/v1/artists/{artistId}/tracks
-     * Retrieves paginated tracks. Results are cached in Redis.
-     */
     @Transactional(readOnly = true)
-    @Cacheable(value = "artist-tracks", key = "#artistId")
-    public Page<Track> getArtistTracks(UUID artistId, Pageable pageable) {
+    @Cacheable(
+            value = "artist-tracks",
+            key = "#artistId + ':' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort")
+    public Page<TrackResponseDto> getArtistTracks(UUID artistId, Pageable pageable) {
         log.info("Fetching tracks from database for artist ID: {}", artistId);
 
         if (!artistRepository.existsById(artistId)) {
-            throw new EntityNotFoundException("Artist not found");
+            throw new ArtistNotFoundException("Artist not found: " + artistId);
         }
 
-        // Requires a custom method in TrackRepository:
-        // Page<Track> findByArtistId(UUID artistId, Pageable pageable);
-        return trackRepository.findByArtistId(artistId, pageable);
+        return trackRepository.findByArtistId(artistId, pageable)
+                .map(TrackResponseDto::fromEntity);
     }
 
-    /**
-     * GET /api/v1/artists/artist-of-the-day
-     * Returns a deterministic artist for the current UTC day, rotating through artists by ID.
-     */
     @Transactional(readOnly = true)
-    public Artist getArtistOfTheDay() {
-        log.info("Fetching Artist of the Day from database");
+    @Cacheable(
+            value = "artist-of-the-day",
+            key = "T(java.time.LocalDate).now(T(java.time.ZoneOffset).UTC).toString()")
+    public ArtistResponseDto getArtistOfTheDay() {
+        log.info("Calculating Artist of the Day from database");
 
+        // The catalogue size is the length of one complete rotation.
         long artistCount = artistRepository.count();
         if (artistCount == 0) {
-            throw new EntityNotFoundException("No artists available for Artist of the Day");
+            throw new ArtistNotFoundException("No artists available for Artist of the Day");
         }
 
-        long dayIndex = Math.floorMod(LocalDate.now(ZoneOffset.UTC).toEpochDay(), artistCount);
+        // Turn today's UTC date into a day number, then wrap it into a valid
+        // zero-based catalogue index. The index advances by one each day.
+        long dayIndex = Math.floorMod(LocalDate.now(ZoneOffset.UTC)
+                .toEpochDay(), artistCount);
+
+        // Use one-item pagination to fetch only the selected artist. Sorting by ID
+        // gives each index a stable artist, regardless of database row order.
         Pageable artistPage = PageRequest.of(
                 Math.toIntExact(dayIndex),
                 1,
                 Sort.by(Sort.Direction.ASC, "id"));
 
-        return artistRepository.findAll(artistPage).getContent().stream()
+        Artist artist = artistRepository.findAll(artistPage).getContent()
+                .stream()
                 .findFirst()
-                .orElseThrow(() -> new EntityNotFoundException("No artists available for Artist of the Day"));
+                .orElseThrow(() -> new ArtistNotFoundException("No artists available"));
+
+        // Cache and return a response DTO rather than a JPA entity.
+        return ArtistResponseDto.fromEntity(artist);
     }
 }

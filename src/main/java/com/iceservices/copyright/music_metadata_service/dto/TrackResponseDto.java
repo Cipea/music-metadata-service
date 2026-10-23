@@ -4,6 +4,7 @@ package com.iceservices.copyright.music_metadata_service.dto;
 import com.iceservices.copyright.music_metadata_service.entity.Track;
 
 import java.time.LocalDate;
+import java.io.Serializable;
 import java.util.UUID;
 
 public record TrackResponseDto(
@@ -14,7 +15,7 @@ public record TrackResponseDto(
         Integer durationSeconds,
         String genre,
         LocalDate releaseDate
-) {
+) implements Serializable {
     public static TrackResponseDto fromEntity(Track track) {
         return new TrackResponseDto(
                 track.getId(),

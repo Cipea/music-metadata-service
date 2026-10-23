@@ -29,6 +29,28 @@ public class GlobalExceptionHandler {
                 request);
     }
 
+    @ExceptionHandler(ArtistNotFoundException.class)
+    public ProblemDetail handleArtistNotFound(
+            ArtistNotFoundException exception,
+            HttpServletRequest request) {
+        return problem(
+                HttpStatus.NOT_FOUND,
+                "Artist not found",
+                exception.getMessage(),
+                request);
+    }
+
+    @ExceptionHandler(ArtistAliasConflictException.class)
+    public ProblemDetail handleArtistAliasConflict(
+            ArtistAliasConflictException exception,
+            HttpServletRequest request) {
+        return problem(
+                HttpStatus.CONFLICT,
+                "Artist alias conflict",
+                exception.getMessage(),
+                request);
+    }
+
     @ExceptionHandler({
             MethodArgumentNotValidException.class,
             HttpMessageNotReadableException.class,

@@ -23,6 +23,15 @@ spring:
         jwt:
           issuer-uri: https://dev-cliw71aikgnw5d80.us.auth0.com/
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  cache:
+    type: redis
+    redis:
+      time-to-live: 30m
+
 logging:
   level:
     org.flywaydb: DEBUG

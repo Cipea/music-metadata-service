@@ -74,8 +74,7 @@ public class MetadataController {
             @PathVariable UUID artistId,
             @PageableDefault(size = 20) Pageable pageable) {
 
-        Page<TrackResponseDto> tracks = metadataService.getArtistTracks(artistId, pageable)
-                .map(TrackResponseDto::fromEntity);
+        Page<TrackResponseDto> tracks = metadataService.getArtistTracks(artistId, pageable);
         return ResponseEntity.ok(tracks);
     }
 
@@ -85,7 +84,7 @@ public class MetadataController {
      */
     @GetMapping("/artist-of-the-day")
     public ResponseEntity<ArtistResponseDto> getArtistOfTheDay() {
-        ArtistResponseDto artist = ArtistResponseDto.fromEntity(metadataService.getArtistOfTheDay());
+        ArtistResponseDto artist = metadataService.getArtistOfTheDay();
         return ResponseEntity.ok(artist);
     }
 }

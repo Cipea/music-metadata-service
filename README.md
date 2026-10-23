@@ -1,22 +1,153 @@
-# music-metadata-service
-Music Metadata Service that stores and provides metadata about different music tracks and artists.
+# Music Metadata Service
 
-## Run with Docker
+A Spring Boot REST API for artist and track metadata. PostgreSQL stores the
+catalogue, and Redis caches read responses.
 
-Build the image from this directory:
+## Run locally with Docker Compose
 
-```sh
-docker build -t music-metadata-service .
-```
+Requirements: Docker with the Compose plugin.
 
-Run it, providing the database settings required by your environment:
+From this directory, build and start the API, PostgreSQL, and Redis:
 
 ```sh
-docker run --rm -p 8080:8080 \
-  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/music_metadata \
-  -e SPRING_DATASOURCE_USERNAME=your_username \
-  -e SPRING_DATASOURCE_PASSWORD=your_password \
-  music-metadata-service
+docker compose up --build
 ```
 
-The container listens on port `8080`. Replace the example database values with your PostgreSQL configuration.
+The API is available at `http://localhost:8080`. Compose starts PostgreSQL on
+port `5432` and Redis on port `6379`. Flyway creates the schema and loads sample
+artists and tracks. To stop the services:
+
+```sh
+docker compose down
+```
+
+To also remove the local PostgreSQL data volume and reset the database:
+
+```sh
+docker compose down --volumes
+```
+
+> Removing the volume deletes the local database data.
+
+## Authentication
+
+The API endpoints require a valid JWT bearer token issued by the Auth0 issuer
+configured for this service. Obtain a token with access to the configured API
+from your development Auth0 setup, then set it in your shell:
+
+```sh
+export TOKEN='your-jwt-access-token'
+```
+
+Swagger UI and the OpenAPI document do not require authentication:
+
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- OpenAPI: `http://localhost:8080/v3/api-docs`
+
+Requests without a valid token return `401 Unauthorized`.
+
+## Manually test the API
+
+The sample seed data includes two artists:
+
+| Artist | ID |
+| --- | --- |
+| The Midnight | `11111111-1111-1111-1111-111111111111` |
+| Luna & The Tides | `22222222-2222-2222-2222-222222222222` |
+
+For convenience, define the first artist ID:
+
+```sh
+export ARTIST_ID='11111111-1111-1111-1111-111111111111'
+```
+
+### Get an artist's tracks
+
+```sh
+curl -i \
+  -H "Authorization: Bearer $TOKEN" \
+  'http://localhost:8080/api/v1/artist/11111111-1111-1111-1111-111111111111/tracks?page=0&size=20'
+```
+
+Try `page=1` or another `size` to request a different cached page.
+
+### Add a track
+
+```sh
+curl -i -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "title": "New Song",
+    "durationSeconds": 215,
+    "genre": "Synthwave",
+    "releaseDate": "2026-10-23"
+  }' \
+  "http://localhost:8080/api/v1/artist/$ARTIST_ID/tracks"
+```
+
+Expect `201 Created` and a `Location` header. Fetch the tracks again to confirm
+the new track is present and the cached response was refreshed.
+
+### Add an alias
+
+```sh
+curl -i -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"aliasName":"The Midnight Project"}' \
+  "http://localhost:8080/api/v1/artist/$ARTIST_ID/aliases"
+```
+
+The response includes the artist and its aliases. To test duplicate-alias
+handling, submit the same request again: the API returns `409 Conflict`.
+
+### Update an artist's primary name
+
+```sh
+curl -i -X PATCH \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"newPrimaryName":"The Midnight Updated"}' \
+  "http://localhost:8080/api/v1/artist/$ARTIST_ID/name"
+```
+
+The previous primary name is retained as an alias.
+
+### Get the Artist of the Day
+
+```sh
+curl -i \
+  -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v1/artist/artist-of-the-day
+```
+
+The selected artist advances once per UTC day through artists ordered by ID,
+then wraps to the beginning of the catalogue. The daily result is cached in
+Redis.
+
+### Check Redis
+
+List cache keys from the Redis container:
+
+```sh
+docker compose exec redis redis-cli --scan --pattern 'artist-*'
+```
+
+Cache entries use a 30-minute TTL. Track cache entries are evicted after track
+or artist updates; artist updates also evict the Artist of the Day cache.
+
+## Run tests
+
+The project uses Java 25 and Maven. From this directory:
+
+```sh
+bash ./mvnw test
+```
+
+The Spring context test uses the configured PostgreSQL and Redis services, so
+start them first if they are not already running:
+
+```sh
+docker compose up -d postgres redis
+```
