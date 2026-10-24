@@ -2,6 +2,7 @@ package com.iceservices.copyright.music_metadata_service.controller;
 
 import com.iceservices.copyright.music_metadata_service.entity.Artist;
 import com.iceservices.copyright.music_metadata_service.entity.ArtistAlias;
+import com.iceservices.copyright.music_metadata_service.entity.ArtistEntityType;
 import com.iceservices.copyright.music_metadata_service.entity.Track;
 import com.iceservices.copyright.music_metadata_service.dto.ArtistResponseDto;
 import com.iceservices.copyright.music_metadata_service.dto.TrackResponseDto;
@@ -174,7 +175,8 @@ class MetadataControllerIntegrationTest {
         UUID artistId = UUID.randomUUID();
         when(metadataService.getArtistOfTheDay()).thenReturn(
                 new ArtistResponseDto(
-                        artistId, "Artist", "Legal Name", "PERSON", "Biography", new Date(), List.of("Alias")));
+                        artistId, "Artist", "Legal Name", ArtistEntityType.PERSON,
+                        "Biography", new Date(), List.of("Alias")));
 
         mockMvc.perform(get(ARTIST_PATH + "/artist-of-the-day"))
                 .andExpect(status().isOk())
@@ -235,7 +237,7 @@ class MetadataControllerIntegrationTest {
                 .id(id)
                 .primaryName(primaryName)
                 .legalName(primaryName)
-                .entityType("PERSON")
+                .entityType(ArtistEntityType.PERSON)
                 .createdAt(new Date())
                 .build();
     }

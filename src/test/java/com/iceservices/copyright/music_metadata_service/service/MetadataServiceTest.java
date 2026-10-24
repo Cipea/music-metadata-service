@@ -5,6 +5,7 @@ import com.iceservices.copyright.music_metadata_service.dto.TrackRequestDto;
 import com.iceservices.copyright.music_metadata_service.dto.TrackResponseDto;
 import com.iceservices.copyright.music_metadata_service.entity.Artist;
 import com.iceservices.copyright.music_metadata_service.entity.ArtistAlias;
+import com.iceservices.copyright.music_metadata_service.entity.ArtistEntityType;
 import com.iceservices.copyright.music_metadata_service.entity.Track;
 import com.iceservices.copyright.music_metadata_service.exception.ArtistAliasConflictException;
 import com.iceservices.copyright.music_metadata_service.exception.ArtistNotFoundException;
@@ -245,7 +246,7 @@ class MetadataServiceTest {
         UUID artistId = UUID.randomUUID();
         Artist artist = getArtist(artistId, "Artist of the day");
         artist.setLegalName("Legal Artist Name");
-        artist.setEntityType("PERSON");
+        artist.setEntityType(ArtistEntityType.PERSON);
         artist.setBiography("Biography");
         artist.setCreatedAt(new Date());
         artist.getAliases().add(ArtistAlias.builder().artist(artist).aliasName("Alias").build());
@@ -260,7 +261,7 @@ class MetadataServiceTest {
         assertEquals(artistId, result.id());
         assertEquals("Artist of the day", result.primaryName());
         assertEquals("Legal Artist Name", result.legalName());
-        assertEquals("PERSON", result.entityType());
+        assertEquals(ArtistEntityType.PERSON, result.entityType());
         assertEquals(List.of("Alias"), result.aliases());
         verify(artistRepository).findAll(
                 PageRequest.of(expectedIndex, 1, Sort.by(Sort.Direction.ASC, "id")));
@@ -297,7 +298,7 @@ class MetadataServiceTest {
                 .id(id)
                 .primaryName(primaryName)
                 .legalName(primaryName)
-                .entityType("PERSON")
+                .entityType(ArtistEntityType.PERSON)
                 .build();
     }
 }

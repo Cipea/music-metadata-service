@@ -29,8 +29,9 @@ public class Artist {
     @Column(name = "primary_name", nullable = false)
     private String primaryName;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "entity_type", nullable = false)
-    private String entityType;
+    private ArtistEntityType entityType;
 
     @Column(name = "created_at")
     private Date createdAt;

@@ -2,6 +2,7 @@ package com.iceservices.copyright.music_metadata_service.dto;
 
 import com.iceservices.copyright.music_metadata_service.entity.Artist;
 import com.iceservices.copyright.music_metadata_service.entity.ArtistAlias;
+import com.iceservices.copyright.music_metadata_service.entity.ArtistEntityType;
 
 import java.util.Date;
 import java.util.List;
@@ -13,7 +14,7 @@ public record ArtistResponseDto(
         UUID id,
         String primaryName,
         String legalName,
-        String entityType,
+        ArtistEntityType entityType,
         String biography,
         Date createdAt,
         List<String> aliases
