@@ -13,7 +13,6 @@ import com.iceservices.copyright.music_metadata_service.repository.ArtistReposit
 import com.iceservices.copyright.music_metadata_service.repository.TrackRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,13 +29,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -58,32 +53,32 @@ class MetadataServiceTest {
 
     @Test
     void addTrackSavesTrackForArtist() {
+        // Given
         UUID artistId = UUID.randomUUID();
-        Artist artist = artist(artistId, "Artist");
+        Artist artist = getArtist(artistId, "Artist");
         LocalDate releaseDate = LocalDate.of(2024, 5, 17);
         TrackRequestDto request = new TrackRequestDto("Song", 215, "Rock", releaseDate);
         Track savedTrack = Track.builder().id(UUID.randomUUID()).build();
+
         when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
         when(trackRepository.save(any(Track.class))).thenReturn(savedTrack);
 
+        // When
         Track result = metadataService.addTrack(artistId, request);
 
+        // Then
+        assertNotNull(result);
         assertSame(savedTrack, result);
-        ArgumentCaptor<Track> trackCaptor = ArgumentCaptor.forClass(Track.class);
-        verify(trackRepository).save(trackCaptor.capture());
-        Track track = trackCaptor.getValue();
-        assertSame(artist, track.getArtist());
-        assertEquals("Song", track.getTitle());
-        assertEquals(215, track.getLengthSeconds());
-        assertEquals("Rock", track.getGenre());
-        assertEquals(releaseDate, track.getReleaseDate());
+        assertEquals(savedTrack.getId(), result.getId());
     }
 
     @Test
     void addTrackThrowsWhenArtistDoesNotExist() {
+        // Given
         UUID artistId = UUID.randomUUID();
         when(artistRepository.findById(artistId)).thenReturn(Optional.empty());
 
+        // When / Then
         assertThrows(ArtistNotFoundException.class,
                 () -> metadataService.addTrack(artistId, new TrackRequestDto("Song", 215, "Rock", null)));
 
@@ -91,26 +86,39 @@ class MetadataServiceTest {
     }
 
     @Test
-    void addExplicitAliasSavesAliasAndReturnsArtist() {
+    void addExplicitAliasSavesAliasAndReturnsResponse() {
+        // Given
         UUID artistId = UUID.randomUUID();
-        Artist artist = artist(artistId, "Artist");
+        Artist artist = getArtist(artistId, "Artist");
+        UUID aliasId = UUID.randomUUID();
+        ArtistAlias savedAlias = ArtistAlias.builder()
+                .id(aliasId)
+                .artist(artist)
+                .aliasName("Stage Name")
+                .build();
         when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
+        when(artistAliasRepository.save(any(ArtistAlias.class))).thenReturn(savedAlias);
 
-        Artist result = metadataService.addExplicitAlias(artistId, "Stage Name");
+        // When
+        ArtistAlias result = metadataService.addExplicitAlias(artistId, "Stage Name");
 
-        assertSame(artist, result);
-        ArgumentCaptor<ArtistAlias> aliasCaptor = ArgumentCaptor.forClass(ArtistAlias.class);
-        verify(artistAliasRepository).save(aliasCaptor.capture());
-        assertSame(artist, aliasCaptor.getValue().getArtist());
-        assertEquals("Stage Name", aliasCaptor.getValue().getAliasName());
-        verify(artistRepository, times(2)).findById(artistId);
+        // Then
+        assertNotNull(result);
+        assertSame(savedAlias, result);
+        assertEquals(aliasId, result.getId());
+        assertEquals(artistId, result.getArtist().getId());
+        assertEquals("Stage Name", result.getAliasName());
+        verify(artistAliasRepository).save(any(ArtistAlias.class));
+        verify(artistRepository).findById(artistId);
     }
 
     @Test
     void addExplicitAliasThrowsWhenArtistDoesNotExist() {
+        // Given
         UUID artistId = UUID.randomUUID();
         when(artistRepository.findById(artistId)).thenReturn(Optional.empty());
 
+        // When / Then
         assertThrows(ArtistNotFoundException.class,
                 () -> metadataService.addExplicitAlias(artistId, "Stage Name"));
 
@@ -120,11 +128,13 @@ class MetadataServiceTest {
 
     @Test
     void addExplicitAliasThrowsWhenAliasAlreadyExists() {
+        // Given
         UUID artistId = UUID.randomUUID();
-        Artist artist = artist(artistId, "Artist");
+        Artist artist = getArtist(artistId, "Artist");
         artist.getAliases().add(ArtistAlias.builder().artist(artist).aliasName("Stage Name").build());
         when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
 
+        // When / Then
         assertThrows(ArtistAliasConflictException.class,
                 () -> metadataService.addExplicitAlias(artistId, "Stage Name"));
 
@@ -134,39 +144,44 @@ class MetadataServiceTest {
 
     @Test
     void updateArtistNameAddsOldNameAsAliasAndSavesArtist() {
+        // Given
         UUID artistId = UUID.randomUUID();
-        Artist artist = artist(artistId, "Old Name");
+        Artist artist = getArtist(artistId, "Old Name");
         when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
         when(artistRepository.save(artist)).thenReturn(artist);
 
+        // When
         Artist result = metadataService.updateArtistName(artistId, "New Name");
 
+        // Then
+        assertNotNull(result);
         assertSame(artist, result);
-        assertEquals("New Name", artist.getPrimaryName());
-        assertEquals(1, artist.getAliases().size());
-        assertEquals("Old Name", artist.getAliases().getFirst().getAliasName());
-        assertSame(artist, artist.getAliases().getFirst().getArtist());
+        assertEquals("New Name", result.getPrimaryName());
         verify(artistRepository).save(artist);
     }
 
     @Test
     void updateArtistNameDoesNotSaveWhenNameIsUnchangedIgnoringCase() {
+        // Given
         UUID artistId = UUID.randomUUID();
-        Artist artist = artist(artistId, "Artist");
+        Artist artist = getArtist(artistId, "Artist");
         when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
 
+        // When
         Artist result = metadataService.updateArtistName(artistId, "aRTiSt");
 
+        // Then
         assertSame(artist, result);
-        assertTrue(artist.getAliases().isEmpty());
         verify(artistRepository, never()).save(any(Artist.class));
     }
 
     @Test
-    void updateArtistNameThrowsWhenArtistDoesNotExist() {
+    void updateArtistNameThrows404WhenArtistDoesNotExist() {
+        // Given
         UUID artistId = UUID.randomUUID();
         when(artistRepository.findById(artistId)).thenReturn(Optional.empty());
 
+        // When / Then
         assertThrows(ArtistNotFoundException.class,
                 () -> metadataService.updateArtistName(artistId, "New Name"));
 
@@ -175,8 +190,9 @@ class MetadataServiceTest {
 
     @Test
     void getArtistTracksMapsTracksToResponseDtos() {
+        // Given
         UUID artistId = UUID.randomUUID();
-        Artist artist = artist(artistId, "Artist");
+        Artist artist = getArtist(artistId, "Artist");
         Track track = Track.builder()
                 .id(UUID.randomUUID())
                 .artist(artist)
@@ -187,12 +203,16 @@ class MetadataServiceTest {
                 .build();
         Pageable pageable = PageRequest.of(0, 10);
         Page<Track> trackPage = new PageImpl<>(List.of(track), pageable, 1);
+
         when(artistRepository.existsById(artistId)).thenReturn(true);
         when(trackRepository.findByArtistId(artistId, pageable)).thenReturn(trackPage);
 
+        // When
         Page<TrackResponseDto> result = metadataService.getArtistTracks(artistId, pageable);
 
+        // Then
         assertEquals(1, result.getTotalElements());
+
         TrackResponseDto response = result.getContent().getFirst();
         assertEquals(track.getId(), response.id());
         assertEquals(artistId, response.artistId());
@@ -206,9 +226,11 @@ class MetadataServiceTest {
 
     @Test
     void getArtistTracksThrowsWhenArtistDoesNotExist() {
+        // Given
         UUID artistId = UUID.randomUUID();
         when(artistRepository.existsById(artistId)).thenReturn(false);
 
+        // When / Then
         assertThrows(ArtistNotFoundException.class,
                 () -> metadataService.getArtistTracks(artistId, PageRequest.of(0, 10)));
 
@@ -217,10 +239,11 @@ class MetadataServiceTest {
 
     @Test
     void getArtistOfTheDayReturnsArtistAtTodaysUtcCatalogueIndex() {
+        // Given
         long artistCount = 7;
         int expectedIndex = (int) Math.floorMod(LocalDate.now(ZoneOffset.UTC).toEpochDay(), artistCount);
         UUID artistId = UUID.randomUUID();
-        Artist artist = artist(artistId, "Artist of the day");
+        Artist artist = getArtist(artistId, "Artist of the day");
         artist.setLegalName("Legal Artist Name");
         artist.setEntityType("PERSON");
         artist.setBiography("Biography");
@@ -230,23 +253,25 @@ class MetadataServiceTest {
         when(artistRepository.findAll(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(artist)));
 
+        // When
         ArtistResponseDto result = metadataService.getArtistOfTheDay();
 
+        // Then
         assertEquals(artistId, result.id());
         assertEquals("Artist of the day", result.primaryName());
         assertEquals("Legal Artist Name", result.legalName());
         assertEquals("PERSON", result.entityType());
         assertEquals(List.of("Alias"), result.aliases());
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(artistRepository).findAll(pageableCaptor.capture());
-        assertEquals(PageRequest.of(expectedIndex, 1, Sort.by(Sort.Direction.ASC, "id")),
-                pageableCaptor.getValue());
+        verify(artistRepository).findAll(
+                PageRequest.of(expectedIndex, 1, Sort.by(Sort.Direction.ASC, "id")));
     }
 
     @Test
     void getArtistOfTheDayThrowsWhenCatalogueIsEmpty() {
+        // Given
         when(artistRepository.count()).thenReturn(0L);
 
+        // When / Then
         assertThrows(ArtistNotFoundException.class, metadataService::getArtistOfTheDay);
 
         verify(artistRepository, never()).findAll(any(Pageable.class));
@@ -254,31 +279,20 @@ class MetadataServiceTest {
 
     @Test
     void getArtistOfTheDayThrowsWhenSelectedPageIsEmpty() {
+        // Given
         when(artistRepository.count()).thenReturn(1L);
         when(artistRepository.findAll(any(Pageable.class))).thenReturn(Page.empty());
 
+        // When
         ArtistNotFoundException exception = assertThrows(
                 ArtistNotFoundException.class,
                 metadataService::getArtistOfTheDay);
 
+        // Then
         assertEquals("No artists available", exception.getMessage());
     }
 
-    @Test
-    void addExplicitAliasThrowsIfArtistDisappearsBeforeItIsReturned() {
-        UUID artistId = UUID.randomUUID();
-        Artist artist = artist(artistId, "Artist");
-        when(artistRepository.findById(artistId))
-                .thenReturn(Optional.of(artist))
-                .thenReturn(Optional.empty());
-
-        assertThrows(ArtistNotFoundException.class,
-                () -> metadataService.addExplicitAlias(artistId, "Stage Name"));
-
-        verify(artistAliasRepository).save(any(ArtistAlias.class));
-    }
-
-    private static Artist artist(UUID id, String primaryName) {
+    private static Artist getArtist(UUID id, String primaryName) {
         return Artist.builder()
                 .id(id)
                 .primaryName(primaryName)

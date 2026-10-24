@@ -2,17 +2,17 @@ package com.iceservices.copyright.music_metadata_service.controller;
 
 import com.iceservices.copyright.music_metadata_service.dto.*;
 import com.iceservices.copyright.music_metadata_service.entity.Artist;
+import com.iceservices.copyright.music_metadata_service.entity.ArtistAlias;
 import com.iceservices.copyright.music_metadata_service.entity.Track;
 import com.iceservices.copyright.music_metadata_service.service.MetadataService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.net.URI;
 import java.util.UUID;
 
 @RestController
@@ -32,14 +32,7 @@ public class MetadataController {
 
         Track track = metadataService.addTrack(artistId, request);
 
-        // Best practice: Return a 201 Created with a Location header pointing to the new resource
-        URI location = ServletUriComponentsBuilder
-                .fromCurrentRequest()
-                .path("/{id}")
-                .buildAndExpand(track.getId())
-                .toUri();
-
-        return ResponseEntity.created(location).body(TrackResponseDto.fromEntity(track));
+        return ResponseEntity.status(HttpStatus.CREATED).body(TrackResponseDto.fromEntity(track));
     }
 
     /**
@@ -58,12 +51,13 @@ public class MetadataController {
      * POST /api/v1/artist/{artistId}/aliases
      */
     @PostMapping("/{artistId}/aliases")
-    public ResponseEntity<ArtistResponseDto> addExplicitAlias(
+    public ResponseEntity<ArtistAliasRespDTO> addExplicitAlias(
             @PathVariable UUID artistId,
             @RequestBody AliasRequestDto request) {
 
-        Artist updatedArtist = metadataService.addExplicitAlias(artistId, request.aliasName());
-        return ResponseEntity.ok(ArtistResponseDto.fromEntity(updatedArtist));
+        ArtistAlias artistAlias = metadataService.addExplicitAlias(artistId, request.aliasName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ArtistAliasRespDTO.fromEntity(artistAlias));
     }
 
     /**

@@ -3,15 +3,25 @@ package com.iceservices.copyright.music_metadata_service.controller;
 import com.iceservices.copyright.music_metadata_service.entity.Artist;
 import com.iceservices.copyright.music_metadata_service.entity.ArtistAlias;
 import com.iceservices.copyright.music_metadata_service.entity.Track;
+import com.iceservices.copyright.music_metadata_service.dto.ArtistResponseDto;
+import com.iceservices.copyright.music_metadata_service.dto.TrackResponseDto;
 import com.iceservices.copyright.music_metadata_service.exception.ArtistAliasConflictException;
 import com.iceservices.copyright.music_metadata_service.exception.ArtistNotFoundException;
+import com.iceservices.copyright.music_metadata_service.config.SecurityConfig;
 import com.iceservices.copyright.music_metadata_service.service.MetadataService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -29,15 +39,24 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(MetadataController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import({SecurityConfig.class, MetadataControllerIntegrationTest.CacheTestConfiguration.class})
 class MetadataControllerIntegrationTest {
 
     private static final String ARTIST_PATH = "/api/v1/artist";
+
+    @TestConfiguration
+    static class CacheTestConfiguration {
+
+        @Bean
+        CacheManager cacheManager() {
+            return new ConcurrentMapCacheManager("artist-tracks", "artist-of-the-day");
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -46,10 +65,10 @@ class MetadataControllerIntegrationTest {
     private MetadataService metadataService;
 
     @Test
-    void addTrackReturnsCreatedResponseAndLocation() throws Exception {
+    void addTrackReturnsCreatedResponse() throws Exception {
         UUID artistId = UUID.randomUUID();
         UUID trackId = UUID.randomUUID();
-        Artist artist = artist(artistId, "Artist");
+        Artist artist = getArtist(artistId, "Artist");
         Track track = Track.builder()
                 .id(trackId)
                 .artist(artist)
@@ -66,8 +85,6 @@ class MetadataControllerIntegrationTest {
                                 {"title":"Song","durationSeconds":215,"genre":"Rock","releaseDate":"2024-05-17"}
                                 """))
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location",
-                        "http://localhost" + ARTIST_PATH + "/" + artistId + "/tracks/" + trackId))
                 .andExpect(jsonPath("$.id").value(trackId.toString()))
                 .andExpect(jsonPath("$.artistId").value(artistId.toString()))
                 .andExpect(jsonPath("$.artistName").value("Artist"))
@@ -80,7 +97,7 @@ class MetadataControllerIntegrationTest {
     @Test
     void updateArtistNameReturnsArtistAndAliases() throws Exception {
         UUID artistId = UUID.randomUUID();
-        Artist artist = artist(artistId, "New Name");
+        Artist artist = getArtist(artistId, "New Name");
         artist.getAliases().add(ArtistAlias.builder().artist(artist).aliasName("Old Name").build());
         when(metadataService.updateArtistName(artistId, "New Name")).thenReturn(artist);
 
@@ -94,24 +111,30 @@ class MetadataControllerIntegrationTest {
     }
 
     @Test
-    void addExplicitAliasReturnsUpdatedArtist() throws Exception {
+    void addExplicitAliasReturnsAliasResponse() throws Exception {
         UUID artistId = UUID.randomUUID();
-        Artist artist = artist(artistId, "Artist");
-        artist.getAliases().add(ArtistAlias.builder().artist(artist).aliasName("Stage Name").build());
-        when(metadataService.addExplicitAlias(artistId, "Stage Name")).thenReturn(artist);
+        UUID aliasId = UUID.randomUUID();
+        Artist artist = getArtist(artistId, "Artist");
+        when(metadataService.addExplicitAlias(artistId, "Stage Name"))
+                .thenReturn(ArtistAlias.builder()
+                        .id(aliasId)
+                        .artist(artist)
+                        .aliasName("Stage Name")
+                        .build());
 
         mockMvc.perform(post(ARTIST_PATH + "/{artistId}/aliases", artistId)
                         .contentType(APPLICATION_JSON)
                         .content("{\"aliasName\":\"Stage Name\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.primaryName").value("Artist"))
-                .andExpect(jsonPath("$.aliases[0]").value("Stage Name"));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(aliasId.toString()))
+                .andExpect(jsonPath("$.artistId").value(artistId.toString()))
+                .andExpect(jsonPath("$.aliasName").value("Stage Name"));
     }
 
     @Test
     void getArtistTracksPassesPaginationAndReturnsPage() throws Exception {
         UUID artistId = UUID.randomUUID();
-        Artist artist = artist(artistId, "Artist");
+        Artist artist = getArtist(artistId, "Artist");
         Track track = Track.builder()
                 .id(UUID.randomUUID())
                 .artist(artist)
@@ -122,8 +145,10 @@ class MetadataControllerIntegrationTest {
                 .build();
         when(metadataService.getArtistTracks(eq(artistId), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(
-                        new com.iceservices.copyright.music_metadata_service.dto.TrackResponseDto(
-                                track.getId(), artistId, "Artist", "Song", 215, "Rock", track.getReleaseDate()))));
+                        new TrackResponseDto(
+                                track.getId(), artistId, "Artist", "Song", 215, "Rock", track.getReleaseDate())),
+                        PageRequest.of(1, 3, Sort.by(Sort.Direction.DESC, "title")),
+                        4));
 
         mockMvc.perform(get(ARTIST_PATH + "/{artistId}/tracks", artistId)
                         .param("page", "1")
@@ -136,7 +161,8 @@ class MetadataControllerIntegrationTest {
                 .andExpect(jsonPath("$.number").value(1))
                 .andExpect(jsonPath("$.size").value(3));
 
-        org.mockito.ArgumentCaptor<Pageable> pageableCaptor = org.mockito.ArgumentCaptor.forClass(Pageable.class);
+        org.mockito.ArgumentCaptor<Pageable> pageableCaptor =
+                org.mockito.ArgumentCaptor.forClass(Pageable.class);
         verify(metadataService).getArtistTracks(eq(artistId), pageableCaptor.capture());
         assertEquals(1, pageableCaptor.getValue().getPageNumber());
         assertEquals(3, pageableCaptor.getValue().getPageSize());
@@ -147,7 +173,7 @@ class MetadataControllerIntegrationTest {
     void getArtistOfTheDayReturnsArtistResponse() throws Exception {
         UUID artistId = UUID.randomUUID();
         when(metadataService.getArtistOfTheDay()).thenReturn(
-                new com.iceservices.copyright.music_metadata_service.dto.ArtistResponseDto(
+                new ArtistResponseDto(
                         artistId, "Artist", "Legal Name", "PERSON", "Biography", new Date(), List.of("Alias")));
 
         mockMvc.perform(get(ARTIST_PATH + "/artist-of-the-day"))
@@ -204,7 +230,7 @@ class MetadataControllerIntegrationTest {
                 .andExpect(jsonPath("$.detail").value("Invalid value for parameter 'artistId'"));
     }
 
-    private static Artist artist(UUID id, String primaryName) {
+    private static Artist getArtist(UUID id, String primaryName) {
         return Artist.builder()
                 .id(id)
                 .primaryName(primaryName)

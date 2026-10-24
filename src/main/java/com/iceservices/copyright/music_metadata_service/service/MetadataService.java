@@ -58,7 +58,7 @@ public class MetadataService {
             @CacheEvict(value = "artist-tracks", allEntries = true),
             @CacheEvict(value = "artist-of-the-day", allEntries = true)
     })
-    public Artist addExplicitAlias(UUID artistId, String aliasName) {
+    public ArtistAlias addExplicitAlias(UUID artistId, String aliasName) {
         log.info("Adding new alias '{}' for artist ID: {}", aliasName, artistId);
 
         Artist artist = artistRepository.findById(artistId)
@@ -79,10 +79,7 @@ public class MetadataService {
                 .aliasName(aliasName)
                 .build();
 
-        artistAliasRepository.save(artistAlias);
-
-        return artistRepository.findById(artistId)
-                .orElseThrow(() -> new ArtistNotFoundException("Artist not found: " + artistId));
+        return artistAliasRepository.save(artistAlias);
     }
 
     @Transactional
@@ -133,7 +130,7 @@ public class MetadataService {
             value = "artist-of-the-day",
             key = "T(java.time.LocalDate).now(T(java.time.ZoneOffset).UTC).toString()")
     public ArtistResponseDto getArtistOfTheDay() {
-        log.info("Calculating Artist of the Day from database");
+        log.info("Retrieving the Artist of the Day");
 
         // The catalogue size is the length of one complete rotation.
         long artistCount = artistRepository.count();
