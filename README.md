@@ -3,6 +3,28 @@
 A Spring Boot REST API for artist and track metadata. PostgreSQL stores the
 catalogue, and Redis caches read responses.
 
+## Overview
+
+The service exposes secure REST endpoints for retrieving, creating, and updating
+artist and track data, including alias management and a rotating Artist of the
+Day selection. It is designed for local development with Docker Compose and
+supports production-style observability through Spring Boot Actuator and Prometheus.
+
+## Technology stack
+
+The latest project configuration in `pom.xml` includes:
+
+- Java 25
+- Spring Boot 4.1.1
+- Spring Data JPA, Validation, Web MVC, Cache, Redis, Security, and Actuator
+- PostgreSQL for persistence and Flyway for schema/seed migrations
+- OAuth2 Resource Server for JWT bearer authentication with Auth0
+- SpringDoc OpenAPI UI for Swagger and OpenAPI docs
+- Redis for caching and cache invalidation
+- Micrometer Prometheus registry for metrics export
+- Lombok for boilerplate reduction
+- Testcontainers for integration testing
+
 ## Run locally with Docker Compose
 
 Requirements: Docker with the Compose plugin.
@@ -43,6 +65,21 @@ the app container to apply the changes:
 ```sh
 docker compose up -d --build app
 ```
+
+## Seed data
+
+Flyway creates the schema from `src/main/resources/db/migration/V1__init_schema_creation.sql`
+and loads the sample catalogue from these versioned seed scripts, in order:
+
+- `src/main/resources/db/seed/V2__insert_sample_data.sql` adds The Midnight and Luna & The Tides, one alias, and three tracks.
+- `src/main/resources/db/seed/V3__insert_more_sample_data.sql` adds eight more artists, four aliases, and twelve tracks.
+
+The local profile and Docker Compose configure Flyway to scan both
+`classpath:db/migration` and `classpath:db/seed`. Flyway runs each script once
+when the application starts; edits to an already-applied script are not
+re-executed. To apply a changed seed set to a fresh local database, stop Compose
+and remove its PostgreSQL volume with `docker compose down --volumes`, then start
+it again with `docker compose up --build`.
 
 ## Authentication
 
@@ -88,12 +125,20 @@ the development tenant used by this service.
 
 ## Manually test the API
 
-The sample seed data includes two artists:
+The seed scripts load these artists:
 
 | Artist | ID |
 | --- | --- |
 | The Midnight | `11111111-1111-1111-1111-111111111111` |
 | Luna & The Tides | `22222222-2222-2222-2222-222222222222` |
+| Northstar | `77777777-7777-7777-7777-777777777777` |
+| Maya Rivers | `88888888-8888-8888-8888-888888888888` |
+| Paper Lanterns | `99999999-9999-9999-9999-999999999999` |
+| Elias Vale | `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa` |
+| Cinder Coast | `bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb` |
+| Nia Sol | `cccccccc-cccc-cccc-cccc-cccccccccccc` |
+| Juniper Vale | `dddddddd-dddd-dddd-dddd-dddddddddddd` |
+| Theo Park | `eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee` |
 
 For convenience, define the first artist ID:
 

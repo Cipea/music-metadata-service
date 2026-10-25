@@ -11,7 +11,6 @@ spring:
         show_sql: true # Helpful for local debugging
         ddl-auto: validate
 
-
   flyway:
     enabled: true
     clean-disabled: false

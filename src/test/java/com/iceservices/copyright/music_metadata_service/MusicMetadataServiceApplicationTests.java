@@ -1,10 +1,9 @@
 package com.iceservices.copyright.music_metadata_service;
 
+import com.iceservices.copyright.music_metadata_service.controller.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class MusicMetadataServiceApplicationTests {
+class MusicMetadataServiceApplicationTests extends AbstractIntegrationTest {
 
 	@Test
 	void contextLoads() {

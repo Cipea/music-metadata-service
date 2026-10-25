@@ -45,8 +45,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(MetadataController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import({SecurityConfig.class, MetadataControllerIntegrationTest.CacheTestConfiguration.class})
-class MetadataControllerIntegrationTest {
+@Import({SecurityConfig.class, MetadataControllerTest.CacheTestConfiguration.class})
+class MetadataControllerTest {
 
     private static final String ARTIST_PATH = "/api/v1/artist";
 
