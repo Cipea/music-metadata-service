@@ -25,6 +25,38 @@ The latest project configuration in `pom.xml` includes:
 - Lombok for boilerplate reduction
 - Testcontainers for integration testing
 
+## Architecture
+
+The service follows a layered Spring Boot architecture centred on a REST API for
+artist and track metadata.
+
+![Music Metadata Service Architecture](./design/Music_Metadata_Architecture.png)
+
+At runtime, the flow is:
+
+- Client applications send authenticated HTTP requests to the API endpoints in
+  `MetadataController` under `/api/v1/artist`.
+- The controller layer translates REST requests into service calls and returns
+  DTOs for API responses.
+- `MetadataService` contains the transactional business logic for creating tracks,
+  managing aliases, renaming artists, and selecting the rotating Artist of the
+  Day.
+- Spring Data repositories (`ArtistRepository`, `TrackRepository`, and
+  `ArtistAliasRepository`) provide the persistence abstraction over PostgreSQL.
+  Flyway runs the schema and seed scripts before the application becomes ready.
+- Redis is used as a cache-aside layer for frequently requested track pages 
+  and the Artist of the Day response, with cache eviction triggered on mutations
+  such as adding a track or alias.
+- Security is enforced with Spring Security and JWT bearer token validation via
+  Spring Boot's OAuth2 Resource Server configuration.
+- Observability is provided by Actuator endpoints and Prometheus scraping, while
+  request correlation IDs and structured logging help trace requests across the
+  service.
+
+The project is organised by responsibility into Java packages such as
+`controller`, `service`, `repository`, `entity`, `dto`, `config`, and
+`exception`, making the codebase easy to reason about and extend.
+
 ## Run locally with Docker Compose
 
 Requirements: Docker with the Compose plugin.
