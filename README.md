@@ -7,15 +7,15 @@ catalogue, and Redis caches read responses.
 
 Requirements: Docker with the Compose plugin.
 
-From this directory, build and start the API, PostgreSQL, and Redis:
+From this directory, build and start the API, PostgreSQL, Redis, and Prometheus:
 
 ```sh
 docker compose up --build
 ```
 
 The API is available at `http://localhost:8080`. Compose starts PostgreSQL on
-port `5432` and Redis on port `6379`. Flyway creates the schema and loads sample
-artists and tracks. To stop the services:
+port `5432`, Redis on port `6379`, and Prometheus on port `9090`. Flyway creates
+the schema and loads sample artists and tracks. To stop the services:
 
 ```sh
 docker compose down
@@ -29,6 +29,21 @@ docker compose down --volumes
 
 > Removing the volume deletes the local database data.
 
+## Monitoring
+
+Spring Boot Actuator exposes the `health`, `info`, and `prometheus` web endpoints.
+The Prometheus metrics endpoint is available at
+`http://localhost:8080/actuator/prometheus`, and the Prometheus UI is available
+at `http://localhost:9090`. Prometheus scrapes the API every five seconds using
+the configuration in `src/main/resources/prometheus.yml`.
+
+If you change the application configuration or dependencies, rebuild and restart
+the app container to apply the changes:
+
+```sh
+docker compose up -d --build app
+```
+
 ## Authentication
 
 The API endpoints require a valid JWT bearer token issued by the Auth0 issuer
@@ -39,12 +54,37 @@ from your development Auth0 setup, then set it in your shell:
 export TOKEN='your-jwt-access-token'
 ```
 
-Swagger UI and the OpenAPI document do not require authentication:
+Swagger UI, the OpenAPI document, and the exposed Actuator endpoints
+(`health`, `info`, and `prometheus`) do not require authentication:
 
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 - OpenAPI: `http://localhost:8080/v3/api-docs`
+- Actuator health: `http://localhost:8080/actuator/health`
 
-Requests without a valid token return `401 Unauthorized`.
+Other requests without a valid token return `401 Unauthorized`.
+
+## Test APIs with Postman
+
+Import `postman/Metadata Service API.postman_collection.json` into Postman. The
+collection contains requests for adding a track or artist alias, updating an
+artist name, and retrieving artist tracks or the Artist of the Day. Requests
+target the local API at `http://localhost:8080` and use the seeded artist ID
+`11111111-1111-1111-1111-111111111111`.
+
+Before sending requests, set these collection variables in Postman:
+
+| Variable | Value |
+| --- | --- |
+| `auth0_client_id` | Client ID for your Auth0 machine-to-machine application |
+| `auth0_client_secret` | Client secret for that application |
+| `auth0_audience` | Identifier of the Auth0 API configured for this service |
+
+The collection's pre-request script uses those values to request a client-
+credentials access token from the configured Auth0 tenant. It stores the token
+in `current_access_token`, which the requests send as a bearer token. Keep the
+client secret private; do not commit or share a Postman environment or collection
+export containing real credentials. The collection's Auth0 token URL is set to
+the development tenant used by this service.
 
 ## Manually test the API
 
@@ -86,8 +126,8 @@ curl -i -X POST \
   "http://localhost:8080/api/v1/artist/$ARTIST_ID/tracks"
 ```
 
-Expect `201 Created` and a `Location` header. Fetch the tracks again to confirm
-the new track is present and the cached response was refreshed.
+Expect `201 Created`. Fetch the tracks again to confirm the new track is present
+and the cached response was refreshed.
 
 ### Add an alias
 

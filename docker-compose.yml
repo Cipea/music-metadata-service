@@ -31,9 +31,8 @@ services:
       - SPRING_CACHE_TYPE=redis
       - SPRING_CACHE_REDIS_TIME_TO_LIVE=30m
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://dev-cliw71aikgnw5d80.us.auth0.com/
-      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG
       - SPRING_JPA_SHOW_SQL=true
-      - FLYWAY_CLEAN_DISABLED=false
+      - SPRING_FLYWAY_CLEAN_DISABLED=false
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,6 +41,15 @@ services:
     container_name: metadata_cache
     ports:
       - "6379:6379"
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: metadata_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./src/main/resources/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - app
 
 volumes:
   postgres_data:

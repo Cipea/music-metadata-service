@@ -1,0 +1,277 @@
+{
+	"info": {
+		"_postman_id": "719d0194-d2ce-47ab-ade8-324d7cca0115",
+		"name": "Metadata Service API",
+		"description": "API endpoints for the Music Metadata Service",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "59144547",
+		"_collection_link": "https://andreicirimpei94-3397767.postman.co/workspace/Andrei-CIrimpei's-Workspace~cd0c132c-0af6-4144-8641-37b4a4ffcbfb/collection/59144547-719d0194-d2ce-47ab-ade8-324d7cca0115?action=share&source=collection_link&creator=59144547"
+	},
+	"item": [
+		{
+			"name": "Add a New Track",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{current_access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"title\": \"Take my umbrella\",\n    \"durationSeconds\": 180,\n    \"genre\": \"Pop\",\n    \"releaseDate\": \"2005-10-02\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/v1/artist/11111111-1111-1111-1111-111111111111/tracks",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"artist",
+						"11111111-1111-1111-1111-111111111111",
+						"tracks"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Artist Name",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{current_access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"newPrimaryName\": \"Rain Man\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/v1/artist/11111111-1111-1111-1111-111111111111/name",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"artist",
+						"11111111-1111-1111-1111-111111111111",
+						"name"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Add Explicit Alias",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{current_access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"aliasName\": \"Rihanna\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/v1/artist/11111111-1111-1111-1111-111111111111/aliases",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"artist",
+						"11111111-1111-1111-1111-111111111111",
+						"aliases"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Artist Tracks",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{current_access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/v1/artist/11111111-1111-1111-1111-111111111111/tracks?page=0&size=10",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"artist",
+						"11111111-1111-1111-1111-111111111111",
+						"tracks"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "0"
+						},
+						{
+							"key": "size",
+							"value": "10"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Artist of the Day",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{current_access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/v1/artist/artist-of-the-day",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"v1",
+						"artist",
+						"artist-of-the-day"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					"// Replace these 4 values with your Auth0 details",
+					"const tokenUrl = 'https://dev-cliw71aikgnw5d80.us.auth0.com/oauth/token';",
+					"const clientId = {{auth0_client_id}};",
+					"const clientSecret = {{auth0_client_secret}};",
+					"const audience = {{auth0_audience}};",
+					"",
+					"const getTokenRequest = {",
+					"    method: 'POST',",
+					"    url: tokenUrl,",
+					"    header: {",
+					"        'Content-Type': 'application/json'",
+					"    },",
+					"    body: {",
+					"        mode: 'raw',",
+					"        raw: JSON.stringify({",
+					"            client_id: clientId,",
+					"            client_secret: clientSecret,",
+					"            audience: audience,",
+					"            grant_type: 'client_credentials'",
+					"        })",
+					"    }",
+					"};",
+					"",
+					"pm.sendRequest(getTokenRequest, function (err, response) {",
+					"    if (err) {",
+					"        console.error(\"Token retrieval failed:\", err);",
+					"    } else {",
+					"        const token = response.json().access_token;",
+					"        // Saves the token to a Postman variable",
+					"        pm.collectionVariables.set(\"current_access_token\", token); ",
+					"    }",
+					"});"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "current_access_token",
+			"value": ""
+		}
+	]
+}
