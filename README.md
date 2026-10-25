@@ -51,6 +51,31 @@ docker compose down --volumes
 
 > Removing the volume deletes the local database data.
 
+## Run from an IDE
+
+For example, in IntelliJ IDEA:
+
+1. Open this project by selecting `pom.xml` (or the `music-metadata-service`
+   directory) and load it as a Maven project.
+2. Set the project SDK and language level to Java 25.
+3. Start the local dependencies from the IDE terminal or a shell:
+
+   ```sh
+   docker compose up -d postgres redis
+   ```
+
+4. Open
+   `src/main/java/com/iceservices/copyright/music_metadata_service/MusicMetadataServiceApplication.java`
+   and run `MusicMetadataServiceApplication.main()` using the gutter Run icon.
+   In the run configuration, set the active profile to `local` so Flyway
+   loads the sample data. In IntelliJ IDEA, this is available under
+   **Run | Edit Configurations**; enter `local` in the **Active profiles** field.
+
+The application connects to PostgreSQL and Redis on `localhost` using the
+credentials and ports in `src/main/resources/application.yml`. The API listens
+on `http://localhost:8080`. Stop the application from the IDE; stop the
+dependencies with `docker compose down`.
+
 ## Monitoring
 
 Spring Boot Actuator exposes the `health`, `info`, and `prometheus` web endpoints.
@@ -224,15 +249,10 @@ or artist updates; artist updates also evict the Artist of the Day cache.
 
 ## Run tests
 
+The test suite uses Testcontainers. Running ./mvnw test automatically downloads and spins up isolated PostgreSQL and Redis Docker containers,
+executes Flyway migrations, and tears down the infrastructure upon completion.
 The project uses Java 25 and Maven. From this directory:
 
 ```sh
 bash ./mvnw test
-```
-
-The Spring context test uses the configured PostgreSQL and Redis services, so
-start them first if they are not already running:
-
-```sh
-docker compose up -d postgres redis
 ```
